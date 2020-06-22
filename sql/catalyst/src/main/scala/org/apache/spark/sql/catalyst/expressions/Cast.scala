@@ -569,7 +569,7 @@ abstract class CastBase extends UnaryExpression with TimeZoneAwareExpression wit
           throw new ArithmeticException(s"Casting $t to int causes overflow")
         }
       })
-    case TimestampType TimeType =>
+    case TimestampType | TimeType =>
       buildCast[Long](_, t => timestampToLong(t).toInt)
     case x: NumericType if ansiEnabled =>
       b => x.exactNumeric.asInstanceOf[Numeric[Any]].toInt(b)

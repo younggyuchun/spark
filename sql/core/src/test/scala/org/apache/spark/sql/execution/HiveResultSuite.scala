@@ -57,17 +57,18 @@ class HiveResultSuite extends SharedSparkSession {
   }
 
   test("time formatting in hive result") {
-    val time = Seq(
+    val times = Seq(
       "2018-12-28 01:02:03",
-      "1582-10-13 01:02:03",
-      "1582-10-14 01:02:03",
+      "1582-10-03 01:02:03",
+      "1582-10-04 01:02:03",
       "1582-10-15 01:02:03")
-    val df = time.toDF("a").selectExpr("cast(a as time) as b")
-    val result = HiveResult.hiveResultString(df)
-    assert(result == time)
-    val df2 = df.selectExpr("array(b)")
-    val result2 = HiveResult.hiveResultString(df2)
-    assert(result2 == time.map(x => s"[$x]"))
+    val df = times.toDF("a").selectExpr("cast(a as time) as b")
+    val executedPlan1 = df.queryExecution.executedPlan
+    val result = hiveResultString(executedPlan1)
+    assert(result == times)
+    val executedPlan2 = df.selectExpr("array(b)").queryExecution.executedPlan
+    val result2 = hiveResultString(executedPlan2)
+    assert(result2 == times.map(x => s"[$x]"))
   }
 
   test("toHiveString correctly handles UDTs") {

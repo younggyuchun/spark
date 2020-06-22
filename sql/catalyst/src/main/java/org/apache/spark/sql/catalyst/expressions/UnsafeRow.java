@@ -78,7 +78,7 @@ public final class UnsafeRow extends InternalRow implements Externalizable, Kryo
 
   // DecimalType is also mutable
   static {
-    mutableFieldTypes = Collections.unmodifiableSet(
+      mutableFieldTypes = Collections.unmodifiableSet(
       new HashSet<>(
         Arrays.asList(new DataType[] {
           NullType,

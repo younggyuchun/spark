@@ -96,22 +96,21 @@ class RowEncoderSuite extends CodegenInterpretedPlanTest {
 
   encodeDecodeTest(
     new StructType()
-//      .add("null", NullType)
-//      .add("boolean", BooleanType)
-//      .add("byte", ByteType)
-//      .add("short", ShortType)
-//      .add("int", IntegerType)
-//      .add("long", LongType)
-//      .add("float", FloatType)
-//      .add("double", DoubleType)
-//      .add("decimal", DecimalType.SYSTEM_DEFAULT)
-//      .add("string", StringType)
-//      .add("binary", BinaryType)
-//      .add("date", DateType)
-//      .add("timestamp", TimestampType)
+      .add("null", NullType)
+      .add("boolean", BooleanType)
+      .add("byte", ByteType)
+      .add("short", ShortType)
+      .add("int", IntegerType)
+      .add("long", LongType)
+      .add("float", FloatType)
+      .add("double", DoubleType)
+      .add("decimal", DecimalType.SYSTEM_DEFAULT)
+      .add("string", StringType)
+      .add("binary", BinaryType)
+      .add("date", DateType)
+      .add("timestamp", TimestampType)
       .add("time", TimeType)
-//      .add("udt", new ExamplePointUDT)
-            )
+      .add("udt", new ExamplePointUDT))
 
   encodeDecodeTest(
     new StructType()
@@ -314,7 +313,7 @@ class RowEncoderSuite extends CodegenInterpretedPlanTest {
     val e5 = intercept[RuntimeException] {
       val schema = new StructType().add("a", ArrayType(TimeType))
       val encoder = RowEncoder(schema)
-      encoder.toRow(Row(Array("a")))
+      toRow(encoder, Row(Array("a")))
     }
     assert(e5.getMessage.contains("java.lang.String is not a valid external type"))
   }
@@ -344,9 +343,9 @@ class RowEncoderSuite extends CodegenInterpretedPlanTest {
       val schema = new StructType().add("t", TimeType)
       val encoder = RowEncoder(schema).resolveAndBind()
       val instant = java.time.Instant.parse("2019-02-26T16:56:00Z")
-      val row = encoder.toRow(Row(instant))
+      val row = toRow(encoder, Row(instant))
       assert(row.getLong(0) === DateTimeUtils.instantToMicros(instant))
-      val readback = encoder.fromRow(row)
+      val readback = fromRow(encoder, row)
       assert(readback.get(0) === instant)
     }
   }

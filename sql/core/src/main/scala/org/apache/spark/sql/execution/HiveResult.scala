@@ -20,7 +20,7 @@ package org.apache.spark.sql.execution
 import java.nio.charset.StandardCharsets
 import java.sql.{Date, Time, Timestamp}
 import java.time.{Instant, LocalDate}
-import java.sql.{Date, Timestamp}
+import java.sql.{Date, Time, Timestamp}
 import java.time.{Instant, LocalDate, ZoneOffset}
 
 import org.apache.spark.sql.Row
@@ -103,7 +103,7 @@ object HiveResult {
     case (ld: LocalDate, DateType) => formatters.date.format(ld)
     case (t: Timestamp, TimestampType) => formatters.timestamp.format(t)
     case (i: Instant, TimestampType) => formatters.timestamp.format(i)
-    case (t: Time, TimeType) => formatters.timestamp.format(t)
+    // case (t: Time, TimeType) => formatters.timestamp.format(t)
     case (i: Instant, TimeType) => formatters.timestamp.format(i)
     case (bin: Array[Byte], BinaryType) => new String(bin, StandardCharsets.UTF_8)
     case (decimal: java.math.BigDecimal, DecimalType()) => decimal.toPlainString

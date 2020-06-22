@@ -231,6 +231,9 @@ class DataTypeSuite extends SparkFunSuite {
   checkDataTypeFromJson(TimestampType)
   checkDataTypeFromDDL(TimestampType)
 
+  checkDataTypeFromJson(TimeType)
+  checkDataTypeFromDDL(TimeType)
+
   checkDataTypeFromJson(StringType)
   checkDataTypeFromDDL(StringType)
 
@@ -303,6 +306,7 @@ class DataTypeSuite extends SparkFunSuite {
   checkDefaultSize(DecimalType.SYSTEM_DEFAULT, 16)
   checkDefaultSize(DateType, 4)
   checkDefaultSize(TimestampType, 8)
+  checkDefaultSize(TimeType, 8)
   checkDefaultSize(StringType, 20)
   checkDefaultSize(BinaryType, 100)
   checkDefaultSize(ArrayType(DoubleType, true), 8)
@@ -416,6 +420,7 @@ class DataTypeSuite extends SparkFunSuite {
   checkCatalogString(StringType)
   checkCatalogString(DateType)
   checkCatalogString(TimestampType)
+  checkCatalogString(TimeType)
   checkCatalogString(createStruct(4))
   checkCatalogString(createStruct(40))
   checkCatalogString(ArrayType(IntegerType))

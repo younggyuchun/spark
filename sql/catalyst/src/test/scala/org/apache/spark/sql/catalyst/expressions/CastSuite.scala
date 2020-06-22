@@ -217,6 +217,89 @@ abstract class CastSuiteBase extends SparkFunSuite with ExpressionEvalHelper {
     }
   }
 
+  test("cast string to time") {
+    new ParVector(ALL_TIMEZONES.toVector).foreach { zid =>
+      def checkCastStringToTime(str: String, expected: Time): Unit = {
+        checkEvaluation(cast(Literal(str), TimeType, Option(zid.getId)), expected)
+      }
+
+      checkCastStringToTime("123", null)
+
+      val tz = TimeZone.getTimeZone(zid)
+      var c = Calendar.getInstance(tz)
+
+      c = Calendar.getInstance(tz)
+      c.set(2015, 2, 18, 12, 3, 17)
+      c.set(Calendar.MILLISECOND, 0)
+      checkCastStringToTime("2015-03-18 12:03:17", new Time(c.getTimeInMillis))
+      checkCastStringToTime("2015-03-18T12:03:17", new Time(c.getTimeInMillis))
+
+      // If the string value includes timezone string, it represents the timestamp string
+      // in the timezone regardless of the timeZoneId parameter.
+      c = Calendar.getInstance(TimeZone.getTimeZone(UTC))
+      c.set(2015, 2, 18, 12, 3, 17)
+      c.set(Calendar.MILLISECOND, 0)
+      checkCastStringToTime("2015-03-18T12:03:17Z", new Time(c.getTimeInMillis))
+      checkCastStringToTime("2015-03-18 12:03:17Z", new Time(c.getTimeInMillis))
+
+      c = Calendar.getInstance(TimeZone.getTimeZone("GMT-01:00"))
+      c.set(2015, 2, 18, 12, 3, 17)
+      c.set(Calendar.MILLISECOND, 0)
+      checkCastStringToTime("2015-03-18T12:03:17-1:0", new Time(c.getTimeInMillis))
+      checkCastStringToTime("2015-03-18T12:03:17-01:00", new Time(c.getTimeInMillis))
+
+      c = Calendar.getInstance(TimeZone.getTimeZone("GMT+07:30"))
+      c.set(2015, 2, 18, 12, 3, 17)
+      c.set(Calendar.MILLISECOND, 0)
+      checkCastStringToTime("2015-03-18T12:03:17+07:30", new Time(c.getTimeInMillis))
+
+      c = Calendar.getInstance(TimeZone.getTimeZone("GMT+07:03"))
+      c.set(2015, 2, 18, 12, 3, 17)
+      c.set(Calendar.MILLISECOND, 0)
+      checkCastStringToTime("2015-03-18T12:03:17+7:3", new Time(c.getTimeInMillis))
+
+      // tests for the string including milliseconds.
+      c = Calendar.getInstance(tz)
+      c.set(2015, 2, 18, 12, 3, 17)
+      c.set(Calendar.MILLISECOND, 123)
+      checkCastStringToTime("2015-03-18 12:03:17.123", new Time(c.getTimeInMillis))
+      checkCastStringToTime("2015-03-18T12:03:17.123", new Time(c.getTimeInMillis))
+
+      // If the string value includes timezone string, it represents the timestamp string
+      // in the timezone regardless of the timeZoneId parameter.
+      c = Calendar.getInstance(TimeZone.getTimeZone(UTC))
+      c.set(2015, 2, 18, 12, 3, 17)
+      c.set(Calendar.MILLISECOND, 456)
+      checkCastStringToTime("2015-03-18T12:03:17.456Z", new Time(c.getTimeInMillis))
+      checkCastStringToTime("2015-03-18 12:03:17.456Z", new Time(c.getTimeInMillis))
+
+      c = Calendar.getInstance(TimeZone.getTimeZone("GMT-01:00"))
+      c.set(2015, 2, 18, 12, 3, 17)
+      c.set(Calendar.MILLISECOND, 123)
+      checkCastStringToTime("2015-03-18T12:03:17.123-1:0", new Time(c.getTimeInMillis))
+      checkCastStringToTime("2015-03-18T12:03:17.123-01:00", new Time(c.getTimeInMillis))
+
+      c = Calendar.getInstance(TimeZone.getTimeZone("GMT+07:30"))
+      c.set(2015, 2, 18, 12, 3, 17)
+      c.set(Calendar.MILLISECOND, 123)
+      checkCastStringToTime("2015-03-18T12:03:17.123+07:30", new Time(c.getTimeInMillis))
+
+      c = Calendar.getInstance(TimeZone.getTimeZone("GMT+07:03"))
+      c.set(2015, 2, 18, 12, 3, 17)
+      c.set(Calendar.MILLISECOND, 123)
+      checkCastStringToTime("2015-03-18T12:03:17.123+7:3", new Time(c.getTimeInMillis))
+
+      checkCastStringToTime("2015-03-18 123142", null)
+      checkCastStringToTime("2015-03-18T123123", null)
+      checkCastStringToTime("2015-03-18X", null)
+      checkCastStringToTime("2015/03/18", null)
+      checkCastStringToTime("2015.03.18", null)
+      checkCastStringToTime("20150318", null)
+      checkCastStringToTime("2015-031-8", null)
+      checkCastStringToTime("2015-03-18T12:03:17-0:70", null)
+    }
+  }
+
   test("cast from boolean") {
     checkEvaluation(cast(true, IntegerType), 1)
     checkEvaluation(cast(false, IntegerType), 0)
@@ -252,6 +335,8 @@ abstract class CastSuiteBase extends SparkFunSuite with ExpressionEvalHelper {
     withSQLConf(SQLConf.LEGACY_ALLOW_CAST_NUMERIC_TO_TIMESTAMP.key -> "true") {
       checkEvaluation(cast(cast(1.toDouble, TimestampType), DoubleType), 1.toDouble)
     }
+
+    checkEvaluation(cast(cast(1.toDouble, TimeType), DoubleType), 1.toDouble)
   }
 
   test("cast from string") {
@@ -278,8 +363,8 @@ abstract class CastSuiteBase extends SparkFunSuite with ExpressionEvalHelper {
     val nts = sts + ".1"
     val zt = "00:00:00"
     val t = "00:00:02"
-    val ts = withDefaultTimeZone(TimeZoneGMT)(Timestamp.valueOf(nts))
-    val ts2 = withDefaultTimeZone(TimeZoneGMT)(Time.valueOf(t))
+    val ts = withDefaultTimeZone(UTC)(Timestamp.valueOf(nts))
+    val ts2 = withDefaultTimeZone(UTC)(Time.valueOf(t))
 
     for (tz <- ALL_TIMEZONES) {
       val timeZoneId = Option(tz.getId)
@@ -295,20 +380,32 @@ abstract class CastSuiteBase extends SparkFunSuite with ExpressionEvalHelper {
         cast(cast(new Timestamp(c.getTimeInMillis), StringType, timeZoneId),
           TimestampType, timeZoneId),
         millisToMicros(c.getTimeInMillis))
+      checkEvaluation(
+        cast(cast(new Time(c.getTimeInMillis), StringType, timeZoneId),
+          TimeType, timeZoneId),
+        millisToMicros(c.getTimeInMillis))
+      c = Calendar.getInstance(TimeZoneGMT)
+      c.set(2015, 10, 1, 2, 30, 0)
+      checkEvaluation(
+        cast(cast(new Time(c.getTimeInMillis), StringType, timeZoneId),
+          TimeType, timeZoneId),
+        millisToMicros(c.getTimeInMillis))
     }
 
     checkEvaluation(cast("abdef", StringType), "abdef")
     checkEvaluation(cast("abdef", TimestampType, UTC_OPT), null)
+    checkEvaluation(cast("abdef", TimeType, UTC_OPT), null)
     checkEvaluation(cast("12.65", DecimalType.SYSTEM_DEFAULT), Decimal(12.65))
 
     checkEvaluation(cast(cast(sd, DateType), StringType), sd)
     checkEvaluation(cast(cast(d, StringType), DateType), 0)
     checkEvaluation(cast(cast(nts, TimestampType, UTC_OPT), StringType, UTC_OPT), nts)
+    checkEvaluation(cast(cast(nts, TimeType, UTC_OPT), StringType, UTC_OPT), nts)
     checkEvaluation(
       cast(cast(ts, StringType, UTC_OPT), TimestampType, UTC_OPT),
       DateTimeUtils.fromJavaTimestamp(ts))
     checkEvaluation(
-          cast(cast(ts2, StringType, gmtId), TimeType, gmtId),
+          cast(cast(ts2, StringType, UTC_OPT), TimeType, UTC_OPT),
           DateTimeUtils.fromJavaTime(ts2))
 
     // all convert to string type to check
@@ -318,9 +415,9 @@ abstract class CastSuiteBase extends SparkFunSuite with ExpressionEvalHelper {
     checkEvaluation(
       cast(cast(cast(ts, DateType, UTC_OPT), TimestampType, UTC_OPT), StringType, UTC_OPT),
       zts)
-    checkEvaluation(cast(cast(cast(nts, TimeType, gmtId), DateType, gmtId), StringType), sd)
+    checkEvaluation(cast(cast(cast(nts, TimeType, UTC_OPT), DateType, UTC_OPT), StringType), sd)
     checkEvaluation(
-      cast(cast(cast(ts2, DateType, gmtId), TimeType, gmtId), StringType, gmtId),
+      cast(cast(cast(ts2, DateType, UTC_OPT), TimeType, UTC_OPT), StringType, UTC_OPT),
       zts)
 
     checkEvaluation(cast(cast("abdef", BinaryType), StringType), "abdef")
@@ -343,9 +440,17 @@ abstract class CastSuiteBase extends SparkFunSuite with ExpressionEvalHelper {
         5.toShort)
     }
 
-      checkEvaluation(cast(cast(cast(cast(cast(cast("5", DecimalType.SYSTEM_DEFAULT),
-        ByteType), TimeType), LongType), StringType), ShortType),
-        5.toShort)
+    checkEvaluation(
+      cast(cast(cast(cast(cast(cast("5", ByteType), TimeType),
+        DecimalType.SYSTEM_DEFAULT), LongType), StringType), ShortType),
+      5.toShort)
+    checkEvaluation(
+      cast(cast(cast(cast(cast(cast("5", TimeType, UTC_OPT), ByteType),
+        DecimalType.SYSTEM_DEFAULT), LongType), StringType), ShortType),
+      null)
+    checkEvaluation(cast(cast(cast(cast(cast(cast("5", DecimalType.SYSTEM_DEFAULT),
+      ByteType), TimeType), LongType), StringType), ShortType),
+      5.toShort)
 
     checkEvaluation(cast("23", DoubleType), 23d)
     checkEvaluation(cast("23", IntegerType), 23)
@@ -394,6 +499,10 @@ abstract class CastSuiteBase extends SparkFunSuite with ExpressionEvalHelper {
     checkEvaluation(
       cast(cast(d, TimestampType, UTC_OPT), StringType, UTC_OPT),
       "1970-01-01 00:00:00")
+
+    checkEvaluation(
+      cast(cast(d, TimeType, UTC_OPT), StringType, UTC_OPT),
+      "1970-01-01 00:00:00")
   }
 
   test("cast from timestamp") {
@@ -432,6 +541,44 @@ abstract class CastSuiteBase extends SparkFunSuite with ExpressionEvalHelper {
       checkEvaluation(cast(Float.NaN, TimestampType), null)
       checkEvaluation(cast(1.0f / 0.0f, TimestampType), null)
     }
+  }
+
+  test("cast from time") {
+    val millis = 15 * 1000 + 3
+    val seconds = millis * 1000 + 3
+    val ts = new Time(millis)
+    val tss = new Time(seconds)
+    checkEvaluation(cast(ts, ShortType), 15.toShort)
+    checkEvaluation(cast(ts, IntegerType), 15)
+    checkEvaluation(cast(ts, LongType), 15.toLong)
+    checkEvaluation(cast(ts, FloatType), 15.003f)
+    checkEvaluation(cast(ts, DoubleType), 15.003)
+
+
+    checkEvaluation(cast(cast(tss, ShortType), TimeType),
+      DateTimeUtils.fromJavaTime(ts) * MILLIS_PER_SECOND)
+    checkEvaluation(cast(cast(tss, IntegerType), TimeType),
+      DateTimeUtils.fromJavaTime(ts) * MILLIS_PER_SECOND)
+    checkEvaluation(cast(cast(tss, LongType), TimeType),
+      DateTimeUtils.fromJavaTime(ts) * MILLIS_PER_SECOND)
+    checkEvaluation(
+      cast(cast(millis.toFloat / MILLIS_PER_SECOND, TimeType), FloatType),
+      millis.toFloat / MILLIS_PER_SECOND)
+    checkEvaluation(
+      cast(cast(millis.toDouble / MILLIS_PER_SECOND, TimeType), DoubleType),
+      millis.toDouble / MILLIS_PER_SECOND)
+    checkEvaluation(
+      cast(cast(Decimal(1), TimeType), DecimalType.SYSTEM_DEFAULT),
+      Decimal(1))
+
+    // A test for higher precision than millis
+    checkEvaluation(cast(cast(0.000001, TimeType), DoubleType), 0.000001)
+
+    checkEvaluation(cast(Double.NaN, TimeType), null)
+    checkEvaluation(cast(1.0 / 0.0, TimeType), null)
+    checkEvaluation(cast(Float.NaN, TimeType), null)
+    checkEvaluation(cast(1.0f / 0.0f, TimeType), null)
+
   }
 
   test("cast from array") {
